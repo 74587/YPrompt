@@ -22,6 +22,10 @@ export interface VersionInfo {
   language?: string
   format?: string
   tags?: string[]
+  
+  // 用户提示词上下文
+  system_prompt?: string
+  conversation_history?: string
 }
 
 export interface VersionListResponse {
