@@ -1281,7 +1281,7 @@ const handleSavePrompt = () => {
   showSaveDialog.value = true
 }
 
-// 确认保存
+// 确认保存 (使用统一保存接口 - 只调用一次API)
 const handleSaveConfirm = async (formData: {
   title: string
   description: string
@@ -1299,103 +1299,82 @@ const handleSaveConfirm = async (formData: {
       return
     }
 
-    // 判断是新建还是更新
-    const isNewPrompt = !currentPromptId.value
+    // 从optimizeStore获取loadedPromptId (从"我的"页面加载时会设置)
+    // 优先使用loadedPromptId,其次使用currentPromptId
+    const promptId = optimizeStore.loadedPromptId || currentPromptId.value
     
-    if (isNewPrompt) {
-      // 新建提示词
-      const saveData = {
-        title: formData.title,
-        description: formData.description,
-        final_prompt: optimizedSystemPrompt.value,
-        language: 'zh',
-        format: 'markdown',
-        prompt_type: formData.promptType,
-        tags: formData.tags,
-        is_public: formData.isPublic ? 1 : 0
-      }
+    console.log('💾 系统提示词保存:', {
+      promptId: promptId,
+      isUpdate: !!promptId,
+      title: formData.title,
+      loadedPromptId: optimizeStore.loadedPromptId,
+      currentPromptId: currentPromptId.value
+    })
+    
+    // 统一调用保存接口 (后端自动判断新建还是更新,自动创建版本)
+    const saveData = {
+      // 如果有id则更新,没有则新建
+      ...(promptId ? { id: promptId } : {}),
+      title: formData.title,
+      description: formData.description,
+      final_prompt: optimizedSystemPrompt.value,
+      language: 'zh',
+      format: 'markdown',
+      prompt_type: formData.promptType,
+      tags: formData.tags,
+      is_public: formData.isPublic ? 1 : 0,
+      // 版本控制参数
+      create_version: true,
+      change_type: 'patch',
+      change_summary: formData.description || '优化系统提示词',
+      change_log: '通过系统提示词优化功能更新',
+      version_tag: 'stable'
+    }
+    
+    console.log('📤 发送保存请求:', {
+      hasId: !!promptId,
+      createVersion: true,
+      changeType: 'patch'
+    })
 
-      const response = await fetch(`${API_BASE_URL}/api/prompts/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(saveData)
+    const response = await fetch(`${API_BASE_URL}/api/prompts/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(saveData)
+    })
+
+    const result = await response.json()
+    if (result.code === 200) {
+      console.log('✅ 保存成功:', {
+        id: result.data.id,
+        isNew: result.data.is_new,
+        version: result.data.version,
+        message: result.data.message
       })
-
-      const result = await response.json()
-      if (result.code === 200) {
-        currentPromptId.value = result.data.id
-        currentPromptTitle.value = formData.title
-        
-        // 保存到缓存
-        saveCache({
-          currentPromptId: result.data.id,
-          currentPromptTitle: formData.title
-        })
-        
-        notificationStore.success('提示词保存成功！')
-        showSaveDialog.value = false
-      } else {
-        throw new Error(result.message || '保存失败')
+      
+      // 更新本地状态
+      currentPromptId.value = result.data.id
+      currentPromptTitle.value = formData.title
+      
+      // 如果是新建,同步设置loadedPromptId
+      if (result.data.is_new) {
+        optimizeStore.setLoadedPromptId(result.data.id)
+        console.log('🆕 新建提示词,设置loadedPromptId:', result.data.id)
       }
+      
+      // 保存到缓存
+      saveCache({
+        currentPromptId: result.data.id,
+        currentPromptTitle: formData.title
+      })
+      
+      notificationStore.success(result.data.message || '保存成功')
+      showSaveDialog.value = false
     } else {
-      // 更新现有提示词版本
-      const versionData = {
-        change_type: 'patch',
-        change_summary: formData.description || '优化提示词',
-        change_log: `通过优化功能更新了提示词内容`,
-        version_tag: 'stable'
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/versions/${currentPromptId.value}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(versionData)
-      })
-
-      const result = await response.json()
-      if (result.code === 200) {
-        // 同时更新提示词标题和描述
-        const updateData = {
-          title: formData.title,
-          description: formData.description,
-          final_prompt: optimizedSystemPrompt.value,
-          prompt_type: formData.promptType,
-          tags: formData.tags,
-          is_public: formData.isPublic ? 1 : 0
-        }
-
-        const updateResponse = await fetch(`${API_BASE_URL}/api/prompts/${currentPromptId.value}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(updateData)
-        })
-
-        const updateResult = await updateResponse.json()
-        if (updateResult.code === 200) {
-          currentPromptTitle.value = formData.title
-          
-          // 保存到缓存
-          saveCache({
-            currentPromptTitle: formData.title
-          })
-          
-          notificationStore.success(`提示词已更新至版本 ${result.data.version_number}`)
-          showSaveDialog.value = false
-        } else {
-          throw new Error(updateResult.message || '更新失败')
-        }
-      } else {
-        throw new Error(result.message || '创建版本失败')
-      }
+      throw new Error(result.message || '保存失败')
     }
 
   } catch (err: any) {

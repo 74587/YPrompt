@@ -542,8 +542,22 @@ const loadUserPromptFromLibrary = () => {
 }
 
 // 组件挂载时检查是否有需要加载的用户提示词
-import { onMounted } from 'vue'
+import { onMounted, watch } from 'vue'
 onMounted(() => {
   loadUserPromptFromLibrary()
 })
+
+// 监听localStorage变化（处理父组件异步加载的情况）
+watch(
+  () => localStorage.getItem('yprompt_optimize_loaded_user_prompt'),
+  (newValue) => {
+    if (newValue) {
+      // 延迟一帧确保DOM更新
+      requestAnimationFrame(() => {
+        loadUserPromptFromLibrary()
+      })
+    }
+  },
+  { immediate: false }
+)
 </script>
