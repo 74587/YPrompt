@@ -232,6 +232,7 @@ import { ref, onMounted, computed, inject, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNavigationStore } from '@/stores/navigationStore'
 import { useNotificationStore } from '@/stores/notificationStore'
+import { copyToClipboard as copyUtil } from '@/utils/clipboardUtils'
 import PromptDetailModal from './PromptDetailModal.vue'
 import VersionHistoryPanel from './VersionHistoryPanel.vue'
 
@@ -475,7 +476,7 @@ const handleOptimizePrompt = (prompt: Prompt) => {
 // 复制提示词
 const handleCopyPrompt = async (prompt: Prompt) => {
   try {
-    await navigator.clipboard.writeText(prompt.final_prompt)
+    await copyUtil(prompt.final_prompt)
     alert('提示词已复制到剪贴板')
   } catch (err) {
     console.error('复制失败:', err)

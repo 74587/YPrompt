@@ -235,6 +235,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import { ArrowUp, FileText, MessageSquare, RefreshCw, ArrowLeftRight, Trash2, Copy, Edit2, X, Check } from 'lucide-vue-next'
+import { copyToClipboard as copyUtil } from '@/utils/clipboardUtils'
 import { useConversationMessages } from '../../composables/useConversationMessages'
 import SystemPromptModal from './SystemPromptModal.vue'
 
@@ -458,7 +459,7 @@ const handleSaveSystemPrompt = () => {
 
 const copyMessage = async (content: string) => {
   try {
-    await navigator.clipboard.writeText(content)
+    await copyUtil(content)
   } catch (err) {
     console.error('复制失败:', err)
   }

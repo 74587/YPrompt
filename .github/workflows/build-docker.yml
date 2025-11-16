@@ -33,10 +33,33 @@ jobs:
       working-directory: frontend
       run: npm ci
 
+    - name: Check for builtin providers config
+      id: check_builtin
+      working-directory: frontend
+      run: |
+        echo "🔍 检查内置AI提供商配置文件..."
+        if [ -f "builtin-providers.json" ]; then
+          echo "found=true" >> $GITHUB_OUTPUT
+          echo "✅ 发现 builtin-providers.json，将编译到镜像中"
+          echo "📋 配置预览:"
+          cat builtin-providers.json | head -n 20
+        else
+          echo "found=false" >> $GITHUB_OUTPUT
+          echo "ℹ️  未找到 builtin-providers.json (可选配置)"
+          echo "📦 将构建不包含内置AI提供商的镜像"
+          echo "💡 提示: 如需内置AI提供商，请在 frontend/ 目录创建 builtin-providers.json"
+        fi
+
     - name: Build frontend
       working-directory: frontend
       run: |
+        if [ "${{ steps.check_builtin.outputs.found }}" == "true" ]; then
+          echo "🔧 构建前端 (包含内置AI提供商配置)..."
+        else
+          echo "🔧 构建前端 (不包含内置AI提供商配置)..."
+        fi
         npm run build
+        echo "✅ 前端构建完成"
         ls -la dist/
 
     - name: Prepare build context
@@ -50,6 +73,13 @@ jobs:
         cp Dockerfile build-context/
         cp start.sh build-context/
         chmod +x build-context/start.sh
+        
+        # 显示构建摘要
+        if [ "${{ steps.check_builtin.outputs.found }}" == "true" ]; then
+          echo "📦 构建包含内置AI提供商配置"
+        else
+          echo "📦 构建不包含内置AI提供商配置"
+        fi
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3

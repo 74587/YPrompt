@@ -96,6 +96,7 @@
 <script setup lang="ts">
 // @ts-nocheck
 import { ref, computed, watch } from 'vue'
+import { copyToClipboard as copyUtil } from '@/utils/clipboardUtils'
 
 interface Props {
   leftContent: string
@@ -250,7 +251,7 @@ const copyDiffText = () => {
     })
     .join('\n')
   
-  navigator.clipboard.writeText(diffText).then(() => {
+  copyUtil(diffText).then(() => {
     // 可以显示一个提示
     console.log('Diff copied to clipboard')
   })

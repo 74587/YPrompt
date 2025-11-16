@@ -267,6 +267,7 @@
 import { ref, computed } from 'vue'
 import { useOptimizeStore } from '@/stores/optimizeStore'
 import { useOptimizeModule } from '../composables/useOptimizeModule'
+import { copyToClipboard as copyUtil } from '@/utils/clipboardUtils'
 import VersionSelector from './VersionSelector.vue'
 import DiffViewer from './DiffViewer.vue'
 import type { Suggestion } from '@/stores/optimizeStore'
@@ -349,7 +350,7 @@ const copyOptimizedPrompt = () => {
     ? optimizedPrompts.system 
     : optimizedPrompts.user
   
-  navigator.clipboard.writeText(content).then(() => {
+  copyUtil(content).then(() => {
     // 显示复制成功提示
     console.log('Copied to clipboard')
   })

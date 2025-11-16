@@ -477,7 +477,8 @@ ${qualityAnalysis.issues && qualityAnalysis.issues.length > 0 ? `\n**发现的�
    */
   const copyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(text)
+      const { copyToClipboard: copyUtil } = await import('@/utils/clipboardUtils')
+      await copyUtil(text)
       return true
     } catch (error) {
       console.error('复制失败:', error)

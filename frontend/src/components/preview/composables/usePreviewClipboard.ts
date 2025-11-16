@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { useNotificationStore } from '@/stores/notificationStore'
+import { copyToClipboard as copyUtil } from '@/utils/clipboardUtils'
 
 export function usePreviewClipboard() {
   const notificationStore = useNotificationStore()
@@ -18,7 +19,7 @@ export function usePreviewClipboard() {
     }
 
     try {
-      await navigator.clipboard.writeText(text)
+      await copyUtil(text)
       copyStatus.value[key] = true
       notificationStore.success('已复制到剪贴板')
       

@@ -1,6 +1,7 @@
 import { ref, computed, nextTick } from 'vue'
 import { usePromptStore } from '@/stores/promptStore'
 import { useNotificationStore } from '@/stores/notificationStore'
+import { copyToClipboard as copyUtil } from '@/utils/clipboardUtils'
 
 export function useChatMessageOperations(_chatContainer?: any) {
   const promptStore = usePromptStore()
@@ -66,7 +67,7 @@ export function useChatMessageOperations(_chatContainer?: any) {
 
   const copyMessage = async (content: string) => {
     try {
-      await navigator.clipboard.writeText(content)
+      await copyUtil(content)
       notificationStore.success('已复制到剪贴板')
     } catch (error) {
       const textArea = document.createElement('textarea')

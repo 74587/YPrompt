@@ -275,6 +275,7 @@ import { useOptimizeStore } from '@/stores/optimizeStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useNavigationStore } from '@/stores/navigationStore'
 import { useNotificationStore } from '@/stores/notificationStore'
+import { copyToClipboard as copyUtil } from '@/utils/clipboardUtils'
 import { AIService } from '@/services/aiService'
 import SavePromptDialog from '@/components/preview/components/dialogs/SavePromptDialog.vue'
 import { PromptGeneratorService } from '@/services/promptGeneratorService'
@@ -962,7 +963,7 @@ const handleRegenerateAdvice = async () => {
 const handleCopyAdvice = async () => {
   const adviceText = optimizeSuggestionsText.value.join('\n')
   try {
-    await navigator.clipboard.writeText(adviceText)
+    await copyUtil(adviceText)
     isCopiedAdvice.value = true
     setTimeout(() => { isCopiedAdvice.value = false }, 2000)
   } catch (err) {
@@ -1074,7 +1075,7 @@ const handleRegenerateFinal = async () => {
 
 const handleCopyFinal = async () => {
   try {
-    await navigator.clipboard.writeText(optimizedSystemPrompt.value)
+    await copyUtil(optimizedSystemPrompt.value)
     isCopiedFinal.value = true
     setTimeout(() => { isCopiedFinal.value = false }, 2000)
   } catch (err) {

@@ -393,6 +393,7 @@ import { ref, computed } from 'vue'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useOptimizeStore } from '@/stores/optimizeStore'
 import { useOptimizeModule } from '../composables/useOptimizeModule'
+import { copyToClipboard as copyUtil } from '@/utils/clipboardUtils'
 
 const settingsStore = useSettingsStore()
 const optimizeStore = useOptimizeStore()
@@ -581,7 +582,7 @@ const rateResult = (index: number, rating: number) => {
 
 const copyResult = (result: any) => {
   if (result.data) {
-    navigator.clipboard.writeText(result.data.response).then(() => {
+    copyUtil(result.data.response).then(() => {
       console.log('Result copied to clipboard')
     })
   }

@@ -385,6 +385,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
+import { copyToClipboard as copyUtil } from '@/utils/clipboardUtils'
 import VersionHistoryContent from './VersionHistoryContent.vue'
 
 // API配置
@@ -578,7 +579,7 @@ const handleCopy = async () => {
   if (!props.prompt) return
   
   try {
-    await navigator.clipboard.writeText(props.prompt.final_prompt)
+    await copyUtil(props.prompt.final_prompt)
     // 这里可以显示一个toast提示
     alert('提示词已复制到剪贴板')
   } catch (err) {

@@ -188,6 +188,7 @@
 // @ts-nocheck
 // import { computed } from 'vue'
 import type { Suggestion } from '@/stores/optimizeStore'
+import { copyToClipboard as copyUtil } from '@/utils/clipboardUtils'
 
 interface Props {
   originalPrompt: string
@@ -218,7 +219,7 @@ const emit = defineEmits<Emits>()
 
 // 事件处理
 const copyPrompt = (prompt: string) => {
-  navigator.clipboard.writeText(prompt).then(() => {
+  copyUtil(prompt).then(() => {
     console.log('Prompt copied to clipboard')
   })
 }
