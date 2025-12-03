@@ -233,18 +233,18 @@ const handleRegister = async () => {
   isSubmitting.value = true
 
   try {
-    const success = await authStore.register(
+    const result = await authStore.register(
       registerForm.value.username,
       registerForm.value.password,
       registerForm.value.name
     )
 
-    if (success) {
+    if (result.success) {
       // 注册成功，自动登录
       showRegister.value = false
       await handleLocalLogin()
     } else {
-      errorMessage.value = '注册失败，用户名可能已存在'
+      errorMessage.value = result.error || '注册失败，请检查输入信息'
     }
   } catch (error) {
     errorMessage.value = '注册失败，请检查输入信息'

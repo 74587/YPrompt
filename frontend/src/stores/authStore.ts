@@ -145,7 +145,7 @@ export const useAuthStore = defineStore('auth', () => {
   /**
    * 本地用户注册
    */
-  const register = async (username: string, password: string, name?: string): Promise<boolean> => {
+  const register = async (username: string, password: string, name?: string): Promise<{ success: boolean; error?: string }> => {
     isLoading.value = true
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/auth/local/register`, {
@@ -159,12 +159,12 @@ export const useAuthStore = defineStore('auth', () => {
       const result = await response.json()
       
       if (result.code === 200) {
-        return true
+        return { success: true }
       } else {
-        return false
+        return { success: false, error: result.message || '注册失败' }
       }
     } catch (error) {
-      return false
+      return { success: false, error: '网络错误，请稍后重试' }
     } finally {
       isLoading.value = false
     }
