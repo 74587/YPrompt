@@ -25,7 +25,7 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const isLoading = ref(false)
   const authConfig = ref<{
-    linuxdo_enabled: boolean
+    linux_do_enabled: boolean
     linux_do_client_id: string
     linux_do_redirect_uri: string
     local_auth_enabled: boolean

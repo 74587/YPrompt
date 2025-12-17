@@ -107,11 +107,11 @@ export const useNavigationStore = defineStore('navigation', () => {
       const config = authStore.authConfig
       
       // 只有开启了Linux.do OAuth或允许注册时才启用社区功能
-      // 注意字段名：linuxdo_enabled（下划线小写）和 registration_enabled
-      communityEnabled.value = !!(config?.linuxdo_enabled || config?.registration_enabled)
+      // 注意字段名：linux_do_enabled（下划线）和 registration_enabled
+      communityEnabled.value = !!(config?.linux_do_enabled || config?.registration_enabled)
       
       console.log('社区功能状态:', {
-        linuxdo_enabled: config?.linuxdo_enabled,
+        linux_do_enabled: config?.linux_do_enabled,
         registration_enabled: config?.registration_enabled,
         communityEnabled: communityEnabled.value
       })
