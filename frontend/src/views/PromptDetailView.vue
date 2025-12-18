@@ -463,7 +463,17 @@
                     {{ item.comment_count }}
                   </span>
                 </div>
-                <span class="font-mono text-gray-400">v{{ item.current_version || '1.0.0' }}</span>
+                <div class="flex items-center gap-2">
+                  <span 
+                    :class="item.prompt_type === 'system' 
+                      ? 'bg-purple-100 text-purple-700' 
+                      : 'bg-blue-100 text-blue-700'"
+                    class="px-1.5 py-0.5 text-xs font-medium rounded"
+                  >
+                    {{ item.prompt_type === 'system' ? '系统' : '用户' }}
+                  </span>
+                  <span class="font-mono text-gray-400">v{{ item.current_version || '1.0.0' }}</span>
+                </div>
               </div>
             </div>
           </div>

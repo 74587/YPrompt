@@ -293,3 +293,7 @@
 2025-12-17 17:47:50,977 | ERROR | ❌ 获取评论列表失败: no such column: c.parent_id
 2025-12-17 17:48:01,814 | ERROR | ❌ 创建评论失败: table prompt_comments has no column named parent_id
 2025-12-17 17:48:01,816 | ERROR | ❌ 创建评论失败: table prompt_comments has no column named parent_id
+2025-12-18 11:34:13,852 | ERROR | ❌ 同步管理员账号失败: database disk image is malformed
+2025-12-18 11:34:13,853 | ERROR | ❌ SQLite数据库初始化检查失败: database disk image is malformed
+2025-12-18 11:34:44,995 | ERROR | ❌ 同步管理员账号失败: database disk image is malformed
+2025-12-18 11:34:44,995 | ERROR | ❌ SQLite数据库初始化检查失败: database disk image is malformed
