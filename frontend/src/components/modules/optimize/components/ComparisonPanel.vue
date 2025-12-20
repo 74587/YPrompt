@@ -138,37 +138,89 @@
                   <p class="text-sm">暂无对话</p>
                 </div>
               </div>
-              <div
+              <ComparisonChatMessage
                 v-for="msg in (comparisonMode === 'system' ? leftMessages : leftUserMessages)"
                 :key="msg.id"
-                class="flex group"
-                :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"
-              >
-                <div class="flex flex-col w-full max-w-xs lg:max-w-md">
-                  <div
-                    :class="[
-                      msg.role === 'user' 
-                        ? 'bg-blue-500 text-white px-4 py-3 rounded-lg ml-auto' 
-                        : 'bg-gray-100 text-gray-800 px-4 py-3 rounded-lg mr-auto',
-                      'transition-all duration-300 relative'
-                    ]"
-                  >
-                    <div
-                      v-if="msg.role === 'assistant'"
-                      v-html="renderMarkdown(msg.content)"
-                      class="prose prose-sm max-w-none prose-headings:text-gray-800 prose-p:text-gray-800 prose-li:text-gray-800 prose-strong:text-gray-800"
-                    ></div>
-                    <div 
-                      v-else 
-                      class="whitespace-pre-wrap"
-                    >{{ msg.content }}<span v-if="msg.isStreaming" class="animate-pulse">▋</span></div>
-                  </div>
-                </div>
-              </div>
+                :message="msg"
+                :editing-content="editingContentMap[msg.id] || ''"
+                :is-disabled="isLeftGenerating"
+                @start-edit="() => startEditingMessage('left', msg.id)"
+                @save-edit="() => saveEditingMessage('left', msg.id)"
+                @cancel-edit="() => cancelEditingMessage('left', msg.id)"
+                @delete="() => handleDeleteMessage('left', msg.id)"
+                @copy="handleCopyMessage"
+                @resend="(messageId) => handleResendMessage('left', messageId)"
+                @regenerate="(messageId) => handleRegenerateMessage('left', messageId)"
+                @update:editing-content="(value) => updateEditingContent(msg.id, value)"
+              />
             </div>
 
             <!-- 用户模式：独立输入框 -->
             <div v-if="comparisonMode === 'user'" class="p-3 border-t border-gray-200">
+              <input
+                ref="leftFileInputRef"
+                type="file"
+                class="hidden"
+                multiple
+                :accept="attachmentAccept"
+                @change="(event) => handleAttachmentSelect(event, 'left')"
+              />
+              <div
+                v-if="leftAttachments.length > 0"
+                class="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+              >
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm text-gray-600">已选择 {{ leftAttachments.length }} 个附件</span>
+                  <button
+                    @click="clearAttachments('left')"
+                    class="text-xs text-red-500 hover:text-red-600"
+                  >
+                    清空全部
+                  </button>
+                </div>
+                <div class="flex gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                  <div
+                    v-for="attachment in leftAttachments"
+                    :key="attachment.id"
+                    class="flex-shrink-0 flex items-center gap-2 bg-white px-3 py-2 rounded-md border border-gray-200 min-w-0"
+                  >
+                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                      <div class="flex-shrink-0">
+                        <svg v-if="attachment.type === 'image'" class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <svg v-else-if="attachment.type === 'document'" class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <svg v-else-if="attachment.type === 'audio'" class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                        </svg>
+                        <svg v-else-if="attachment.type === 'video'" class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        <svg v-else class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                      </div>
+                      <div class="min-w-0 flex-1">
+                        <div class="text-xs font-medium text-gray-700 truncate max-w-24" :title="attachment.name">
+                          {{ attachment.name }}
+                        </div>
+                        <div class="text-xs text-gray-500">
+                          {{ (attachment.size / 1024).toFixed(1) }}KB
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      @click="removeAttachment('left', attachment.id)"
+                      class="flex-shrink-0 w-4 h-4 text-gray-400 hover:text-red-500 transition-colors"
+                      title="移除附件"
+                    >
+                      <X class="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
               <div 
                 class="relative border border-gray-300 rounded-2xl focus-within:outline-none focus-within:border-gray-300 overflow-hidden" 
                 style="height: 120px;"
@@ -185,8 +237,22 @@
                 </div>
                 
                 <div class="absolute bottom-0 left-0 right-0 h-12 flex justify-between items-center px-2 bg-transparent pointer-events-none">
-                  <div class="w-8 h-8"></div>
-                  
+                  <button
+                    @click="triggerFileSelect('left')"
+                    class="w-8 h-8 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex items-center justify-center pointer-events-auto"
+                    title="支持图片、文档、音频等格式"
+                  >
+                    <div class="relative">
+                      <Paperclip class="w-4 h-4" />
+                      <span
+                        v-if="leftAttachments.length > 0"
+                        class="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center"
+                        style="font-size: 9px;"
+                      >
+                        {{ leftAttachments.length }}
+                      </span>
+                    </div>
+                  </button>
                   <button
                     @click="handleSendLeftMessage"
                     :disabled="!leftInput.trim() || isLeftGenerating"
@@ -331,37 +397,89 @@
               <p class="text-sm">暂无对话</p>
             </div>
           </div>
-          <div
+          <ComparisonChatMessage
             v-for="msg in (comparisonMode === 'system' ? rightMessages : rightUserMessages)"
             :key="msg.id"
-            class="flex group"
-            :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"
-          >
-                <div class="flex flex-col w-full max-w-xs lg:max-w-md">
-                  <div
-                    :class="[
-                      msg.role === 'user' 
-                        ? 'bg-blue-500 text-white px-4 py-3 rounded-lg ml-auto' 
-                        : 'bg-gray-100 text-gray-800 px-4 py-3 rounded-lg mr-auto',
-                      'transition-all duration-300 relative'
-                    ]"
-                  >
-                    <div
-                      v-if="msg.role === 'assistant'"
-                      v-html="renderMarkdown(msg.content)"
-                      class="prose prose-sm max-w-none prose-headings:text-gray-800 prose-p:text-gray-800 prose-li:text-gray-800 prose-strong:text-gray-800"
-                    ></div>
-                    <div 
-                      v-else 
-                      class="whitespace-pre-wrap"
-                    >{{ msg.content }}<span v-if="msg.isStreaming" class="animate-pulse">▋</span></div>
-                  </div>
-                </div>
-              </div>
+            :message="msg"
+            :editing-content="editingContentMap[msg.id] || ''"
+            :is-disabled="isRightGenerating"
+            @start-edit="() => startEditingMessage('right', msg.id)"
+            @save-edit="() => saveEditingMessage('right', msg.id)"
+            @cancel-edit="() => cancelEditingMessage('right', msg.id)"
+            @delete="() => handleDeleteMessage('right', msg.id)"
+            @copy="handleCopyMessage"
+            @resend="(messageId) => handleResendMessage('right', messageId)"
+            @regenerate="(messageId) => handleRegenerateMessage('right', messageId)"
+            @update:editing-content="(value) => updateEditingContent(msg.id, value)"
+          />
             </div>
 
             <!-- 用户模式：独立输入框 -->
             <div v-if="comparisonMode === 'user'" class="p-3 border-t border-gray-200">
+              <input
+                ref="rightFileInputRef"
+                type="file"
+                class="hidden"
+                multiple
+                :accept="attachmentAccept"
+                @change="(event) => handleAttachmentSelect(event, 'right')"
+              />
+              <div
+                v-if="rightAttachments.length > 0"
+                class="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+              >
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm text-gray-600">已选择 {{ rightAttachments.length }} 个附件</span>
+                  <button
+                    @click="clearAttachments('right')"
+                    class="text-xs text-red-500 hover:text-red-600"
+                  >
+                    清空全部
+                  </button>
+                </div>
+                <div class="flex gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                  <div
+                    v-for="attachment in rightAttachments"
+                    :key="attachment.id"
+                    class="flex-shrink-0 flex items-center gap-2 bg-white px-3 py-2 rounded-md border border-gray-200 min-w-0"
+                  >
+                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                      <div class="flex-shrink-0">
+                        <svg v-if="attachment.type === 'image'" class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <svg v-else-if="attachment.type === 'document'" class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <svg v-else-if="attachment.type === 'audio'" class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                        </svg>
+                        <svg v-else-if="attachment.type === 'video'" class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        <svg v-else class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                      </div>
+                      <div class="min-w-0 flex-1">
+                        <div class="text-xs font-medium text-gray-700 truncate max-w-24" :title="attachment.name">
+                          {{ attachment.name }}
+                        </div>
+                        <div class="text-xs text-gray-500">
+                          {{ (attachment.size / 1024).toFixed(1) }}KB
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      @click="removeAttachment('right', attachment.id)"
+                      class="flex-shrink-0 w-4 h-4 text-gray-400 hover:text-red-500 transition-colors"
+                      title="移除附件"
+                    >
+                      <X class="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
               <div 
                 class="relative border border-gray-300 rounded-2xl focus-within:outline-none focus-within:border-gray-300 overflow-hidden" 
                 style="height: 120px;"
@@ -378,8 +496,22 @@
                 </div>
                 
                 <div class="absolute bottom-0 left-0 right-0 h-12 flex justify-between items-center px-2 bg-transparent pointer-events-none">
-                  <div class="w-8 h-8"></div>
-                  
+                  <button
+                    @click="triggerFileSelect('right')"
+                    class="w-8 h-8 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex items-center justify-center pointer-events-auto"
+                    title="支持图片、文档、音频等格式"
+                  >
+                    <div class="relative">
+                      <Paperclip class="w-4 h-4" />
+                      <span
+                        v-if="rightAttachments.length > 0"
+                        class="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center"
+                        style="font-size: 9px;"
+                      >
+                        {{ rightAttachments.length }}
+                      </span>
+                    </div>
+                  </button>
                   <button
                     @click="handleSendRightMessage"
                     :disabled="!rightInput.trim() || isRightGenerating"
@@ -398,6 +530,70 @@
     <!-- 下部：系统模式共用输入框 -->
     <div v-if="comparisonMode === 'system'" class="flex-shrink-0 mt-4">
       <div class="bg-white rounded-lg shadow-md border border-gray-200 p-3">
+        <input
+          ref="sharedFileInputRef"
+          type="file"
+          class="hidden"
+          multiple
+          :accept="attachmentAccept"
+          @change="(event) => handleAttachmentSelect(event, 'shared')"
+        />
+        <div
+          v-if="sharedAttachments.length > 0"
+          class="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+        >
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm text-gray-600">已选择 {{ sharedAttachments.length }} 个附件</span>
+            <button
+              @click="clearAttachments('shared')"
+              class="text-xs text-red-500 hover:text-red-600"
+            >
+              清空全部
+            </button>
+          </div>
+          <div class="flex gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            <div
+              v-for="attachment in sharedAttachments"
+              :key="attachment.id"
+              class="flex-shrink-0 flex items-center gap-2 bg-white px-3 py-2 rounded-md border border-gray-200 min-w-0"
+            >
+              <div class="flex items-center gap-2 min-w-0 flex-1">
+                <div class="flex-shrink-0">
+                  <svg v-if="attachment.type === 'image'" class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <svg v-else-if="attachment.type === 'document'" class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <svg v-else-if="attachment.type === 'audio'" class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                  </svg>
+                  <svg v-else-if="attachment.type === 'video'" class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <svg v-else class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-xs font-medium text-gray-700 truncate max-w-24" :title="attachment.name">
+                    {{ attachment.name }}
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    {{ (attachment.size / 1024).toFixed(1) }}KB
+                  </div>
+                </div>
+              </div>
+              <button
+                @click="removeAttachment('shared', attachment.id)"
+                class="flex-shrink-0 w-4 h-4 text-gray-400 hover:text-red-500 transition-colors"
+                title="移除附件"
+              >
+                <X class="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        </div>
         <div 
           class="relative border border-gray-300 rounded-2xl focus-within:outline-none focus-within:border-gray-300 overflow-hidden" 
           style="height: 120px;"
@@ -414,8 +610,22 @@
           </div>
           
           <div class="absolute bottom-0 left-0 right-0 h-12 flex justify-between items-center px-2 bg-transparent pointer-events-none">
-            <div class="w-8 h-8"></div>
-            
+            <button
+              @click="triggerFileSelect('shared')"
+              class="w-8 h-8 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex items-center justify-center pointer-events-auto"
+              title="支持图片、文档、音频等格式"
+            >
+              <div class="relative">
+                <Paperclip class="w-4 h-4" />
+                <span
+                  v-if="sharedAttachments.length > 0"
+                  class="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center"
+                  style="font-size: 9px;"
+                >
+                  {{ sharedAttachments.length }}
+                </span>
+              </div>
+            </button>
             <button
               @click="handleSendSystemMessage"
               :disabled="!sharedInput.trim() || isGenerating"
@@ -450,17 +660,47 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, nextTick } from 'vue'
-import { MessageSquare, ArrowLeft, RefreshCw, ArrowUp, FileText, ChevronDown } from 'lucide-vue-next'
+import { ref, onMounted, computed, watch, nextTick, reactive } from 'vue'
+import { MessageSquare, ArrowLeft, RefreshCw, ArrowUp, FileText, ChevronDown, Paperclip, X } from 'lucide-vue-next'
 import { useComparison } from '../composables/useComparison'
-import { marked } from 'marked'
 import SystemPromptModal from './SystemPromptModal.vue'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useNavigationStore } from '@/stores/navigationStore'
+import { useNotificationStore } from '@/stores/notificationStore'
+import type { MessageAttachment } from '@/stores/promptStore'
+import ComparisonChatMessage from './ComparisonChatMessage.vue'
 
 const comparison = useComparison()
 const settingsStore = useSettingsStore()
 const navigationStore = useNavigationStore()
+const notificationStore = useNotificationStore()
+
+const editingContentMap = reactive<Record<string, string>>({})
+
+const sharedAttachments = ref<MessageAttachment[]>([])
+const leftAttachments = ref<MessageAttachment[]>([])
+const rightAttachments = ref<MessageAttachment[]>([])
+
+const sharedFileInputRef = ref<HTMLInputElement | null>(null)
+const leftFileInputRef = ref<HTMLInputElement | null>(null)
+const rightFileInputRef = ref<HTMLInputElement | null>(null)
+
+type AttachmentTarget = 'shared' | 'left' | 'right'
+
+const attachmentAccept =
+  'image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv,.json,.xml,.html,.css,.js,.ts,.py,.java,.c,.cpp,.yaml,.yml'
+
+const attachmentMap: Record<AttachmentTarget, typeof sharedAttachments> = {
+  shared: sharedAttachments,
+  left: leftAttachments,
+  right: rightAttachments
+}
+
+const attachmentInputMap: Record<AttachmentTarget, typeof sharedFileInputRef> = {
+  shared: sharedFileInputRef,
+  left: leftFileInputRef,
+  right: rightFileInputRef
+}
 
 // 对话容器引用
 const leftChatContainer = ref<HTMLElement | null>(null)
@@ -528,6 +768,142 @@ const rightModelDisplay = computed(() => {
   return model ? `${provider?.name} - ${model.name}` : '使用全局模型'
 })
 
+const triggerFileSelect = (target: AttachmentTarget) => {
+  attachmentInputMap[target].value?.click()
+}
+
+const handleAttachmentSelect = async (event: Event, target: AttachmentTarget) => {
+  const input = event.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  if (files.length === 0) {
+    input.value = ''
+    return
+  }
+  
+  try {
+    const { processFiles } = await import('@/utils/fileUtils')
+    const result = await processFiles(files)
+    if (result.attachments.length > 0) {
+      attachmentMap[target].value.push(...result.attachments)
+    }
+    if (result.errors.length > 0) {
+      result.errors.forEach(error => notificationStore.error(error))
+    }
+  } catch (error) {
+    notificationStore.error('文件处理失败')
+  } finally {
+    input.value = ''
+  }
+}
+
+const removeAttachment = (target: AttachmentTarget, attachmentId: string) => {
+  const attachments = attachmentMap[target].value
+  const index = attachments.findIndex(att => att.id === attachmentId)
+  if (index !== -1) {
+    attachments.splice(index, 1)
+  }
+}
+
+const clearAttachments = (target: AttachmentTarget) => {
+  attachmentMap[target].value = []
+}
+
+const getMessageList = (side: 'left' | 'right') => {
+  if (comparisonMode.value === 'system') {
+    return side === 'left' ? comparison.state.leftMessages : comparison.state.rightMessages
+  }
+  return side === 'left' ? comparison.state.leftUserMessages : comparison.state.rightUserMessages
+}
+
+const startEditingMessage = (side: 'left' | 'right', messageId: string) => {
+  const list = getMessageList(side)
+  const message = list.find(msg => msg.id === messageId)
+  if (!message || message.isEditing) return
+  message.isEditing = true
+  message.originalContent = message.content
+  editingContentMap[messageId] = message.content
+}
+
+const updateEditingContent = (messageId: string, value: string) => {
+  editingContentMap[messageId] = value
+}
+
+const cancelEditingMessage = (side: 'left' | 'right', messageId: string) => {
+  const list = getMessageList(side)
+  const message = list.find(msg => msg.id === messageId)
+  if (!message) return
+  
+  if (message.originalContent !== undefined) {
+    message.content = message.originalContent
+  }
+  message.isEditing = false
+  message.originalContent = undefined
+  delete editingContentMap[messageId]
+}
+
+const saveEditingMessage = (side: 'left' | 'right', messageId: string) => {
+  const list = getMessageList(side)
+  const message = list.find(msg => msg.id === messageId)
+  if (!message) return
+  const newContent = editingContentMap[messageId]
+  if (typeof newContent === 'string') {
+    message.content = newContent
+  }
+  message.isEditing = false
+  message.originalContent = undefined
+  delete editingContentMap[messageId]
+}
+
+const handleDeleteMessage = (side: 'left' | 'right', messageId: string) => {
+  const list = getMessageList(side)
+  const index = list.findIndex(msg => msg.id === messageId)
+  if (index !== -1) {
+    list.splice(index, 1)
+    delete editingContentMap[messageId]
+  }
+}
+
+const handleCopyMessage = async (content: string) => {
+  try {
+    await navigator.clipboard.writeText(content)
+    notificationStore.success('消息内容已复制')
+  } catch (error) {
+    notificationStore.error('复制失败，请稍后再试')
+  }
+}
+
+const handleResendMessage = async (side: 'left' | 'right', messageId: string) => {
+  const list = getMessageList(side)
+  const message = list.find(msg => msg.id === messageId)
+  if (!message || message.role !== 'user') return
+  
+  if (message.isEditing) {
+    saveEditingMessage(side, messageId)
+  }
+  
+  try {
+    await comparison.resendMessage(side, messageId)
+    notificationStore.success('已重新发送该消息')
+  } catch (error) {
+    const errMessage = error instanceof Error ? error.message : '重新发送失败'
+    notificationStore.error(errMessage)
+  }
+}
+
+const handleRegenerateMessage = async (side: 'left' | 'right', messageId: string) => {
+  const list = getMessageList(side)
+  const message = list.find(msg => msg.id === messageId)
+  if (!message || message.role !== 'assistant') return
+  
+  try {
+    await comparison.regenerateAssistantMessage(side, messageId)
+    notificationStore.success('已重新生成该回复')
+  } catch (error) {
+    const errMessage = error instanceof Error ? error.message : '重新生成失败'
+    notificationStore.error(errMessage)
+  }
+}
+
 // 从 localStorage 加载数据
 onMounted(() => {
   // 加载保存的模型选择
@@ -546,22 +922,24 @@ onMounted(() => {
   
   try {
     const savedData = localStorage.getItem('yprompt_comparison_data')
-    if (savedData) {
-      const data = JSON.parse(savedData)
-      
-      // 设置为从优化结果加载
-      isFromOptimize.value = true
-      
-      if (data.mode === 'system') {
-        comparisonMode.value = 'system'
-        comparison.initSystemComparison(data.originalPrompt, data.optimizedPrompt)
-      } else if (data.mode === 'user') {
-        comparisonMode.value = 'user'
-        comparison.initUserComparison(
-          data.systemPrompt || '',
-          data.originalPrompt,
-          data.optimizedPrompt
-        )
+      if (savedData) {
+        const data = JSON.parse(savedData)
+        
+        // 设置为从优化结果加载
+        isFromOptimize.value = true
+        
+        if (data.mode === 'system') {
+          comparisonMode.value = 'system'
+          comparison.state.mode = 'system'
+          comparison.initSystemComparison(data.originalPrompt, data.optimizedPrompt)
+        } else if (data.mode === 'user') {
+          comparisonMode.value = 'user'
+          comparison.state.mode = 'user'
+          comparison.initUserComparison(
+            data.systemPrompt || '',
+            data.originalPrompt,
+            data.optimizedPrompt
+          )
         // 预填充输入框
         originalUserPrompt.value = data.originalPrompt
         optimizedUserPrompt.value = data.optimizedPrompt
@@ -606,8 +984,9 @@ const handleSendSystemMessage = async () => {
   if (!sharedInput.value.trim()) return
   
   comparison.state.systemConfig.sharedUserInput = sharedInput.value
-  await comparison.sendSystemMessage()
+  await comparison.sendSystemMessage(sharedAttachments.value)
   sharedInput.value = ''
+  sharedAttachments.value = []
 }
 
 // 用户提示词模式：发送左侧消息
@@ -615,7 +994,9 @@ const handleSendLeftMessage = async () => {
   if (!leftInput.value.trim()) return
   
   comparison.state.userConfig.leftUserPrompt = leftInput.value
-  await comparison.sendLeftUserMessage()
+  await comparison.sendLeftUserMessage(leftAttachments.value)
+  leftInput.value = ''
+  leftAttachments.value = []
 }
 
 // 用户提示词模式：发送右侧消息
@@ -623,7 +1004,9 @@ const handleSendRightMessage = async () => {
   if (!rightInput.value.trim()) return
   
   comparison.state.userConfig.rightUserPrompt = rightInput.value
-  await comparison.sendRightUserMessage()
+  await comparison.sendRightUserMessage(rightAttachments.value)
+  rightInput.value = ''
+  rightAttachments.value = []
 }
 
 // 清空左侧对话
@@ -654,14 +1037,16 @@ const loadConversationHistory = (conversationHistory: string) => {
           id: `left-${Date.now()}-${Math.random()}`,
           role,
           content: msg.content,
-          timestamp
+          timestamp,
+          attachments: msg.attachments ? msg.attachments.map((att: MessageAttachment) => ({ ...att })) : []
         })
         
         comparison.state.rightUserMessages.push({
           id: `right-${Date.now()}-${Math.random()}`,
           role,
           content: msg.content,
-          timestamp
+          timestamp,
+          attachments: msg.attachments ? msg.attachments.map((att: MessageAttachment) => ({ ...att })) : []
         })
       })
       // 对话上下文加载完成（JSON格式）
@@ -690,14 +1075,16 @@ const loadConversationHistory = (conversationHistory: string) => {
           id: `left-${Date.now()}-${Math.random()}`,
           role: 'user',
           content,
-          timestamp
+          timestamp,
+          attachments: []
         })
         
         comparison.state.rightUserMessages.push({
           id: `right-${Date.now()}-${Math.random()}`,
           role: 'user',
           content,
-          timestamp
+          timestamp,
+          attachments: []
         })
       } else if (assistantMatch) {
         // 添加AI消息到两侧
@@ -708,14 +1095,16 @@ const loadConversationHistory = (conversationHistory: string) => {
           id: `left-${Date.now()}-${Math.random()}`,
           role: 'assistant',
           content,
-          timestamp
+          timestamp,
+          attachments: []
         })
         
         comparison.state.rightUserMessages.push({
           id: `right-${Date.now()}-${Math.random()}`,
           role: 'assistant',
           content,
-          timestamp
+          timestamp,
+          attachments: []
         })
       }
     }
@@ -838,6 +1227,10 @@ const handleReset = () => {
     rightInput.value = ''
     leftSystemPromptValue.value = ''
     rightSystemPromptValue.value = ''
+    sharedAttachments.value = []
+    leftAttachments.value = []
+    rightAttachments.value = []
+    Object.keys(editingContentMap).forEach(key => delete editingContentMap[key])
     
     // 清空localStorage
     localStorage.removeItem('yprompt_comparison_data')
@@ -903,11 +1296,12 @@ watch(() => comparison.state.isRightGenerating, (val) => {
   }
 })
 
-watch(() => comparisonMode.value, () => {
+watch(() => comparisonMode.value, (val) => {
   if (navigationStore.isMobile) {
     activeMobilePane.value = 'left'
   }
-})
+  comparison.state.mode = val
+}, { immediate: true })
 
 // 监听消息内容变化（流式输出更新）
 watch(() => {
@@ -923,14 +1317,4 @@ watch(() => {
 }, () => {
   scrollToBottom(rightChatContainer.value)
 }, { deep: true })
-
-// Markdown渲染
-const renderMarkdown = (content: string): string => {
-  try {
-    return marked(content) as string
-  } catch (e) {
-    console.error('Markdown渲染失败:', e)
-    return content
-  }
-}
 </script>

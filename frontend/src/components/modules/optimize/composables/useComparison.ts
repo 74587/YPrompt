@@ -3,6 +3,7 @@
 import { reactive, computed } from 'vue'
 import { AIService } from '@/services/aiService'
 import { useSettingsStore } from '@/stores/settingsStore'
+import type { MessageAttachment } from '@/stores/promptStore'
 
 /**
  * 对比模式类型
@@ -20,6 +21,9 @@ export interface ChatMessage {
   content: string
   timestamp: Date
   isStreaming?: boolean
+  attachments?: MessageAttachment[]
+  isEditing?: boolean
+  originalContent?: string
 }
 
 /**
@@ -64,6 +68,9 @@ interface ComparisonState {
 export function useComparison() {
   const settingsStore = useSettingsStore()
   const aiService = AIService.getInstance()
+  const cloneAttachments = (attachments?: MessageAttachment[]) => {
+    return attachments ? attachments.map(att => ({ ...att })) : []
+  }
   
   const state = reactive<ComparisonState>({
     mode: 'system',
@@ -133,7 +140,7 @@ export function useComparison() {
   /**
    * 发送消息（系统提示词对比模式）
    */
-  const sendSystemMessage = async () => {
+  const sendSystemMessage = async (attachments?: MessageAttachment[]) => {
     if (!state.systemConfig.sharedUserInput.trim()) return
     if (isGenerating.value) return
     
@@ -150,14 +157,16 @@ export function useComparison() {
     const userMessageId = `user-${Date.now()}`
     
     // 添加用户消息到两侧
-    const userMsg: ChatMessage = {
-      id: userMessageId,
+    const baseTimestamp = new Date()
+    const createUserMessage = (prefix: 'left' | 'right'): ChatMessage => ({
+      id: `${prefix}-${userMessageId}`,
       role: 'user',
       content: userMessage,
-      timestamp: new Date()
-    }
-    state.leftMessages.push({ ...userMsg, id: `left-${userMessageId}` })
-    state.rightMessages.push({ ...userMsg, id: `right-${userMessageId}` })
+      timestamp: baseTimestamp,
+      attachments: cloneAttachments(attachments)
+    })
+    state.leftMessages.push(createUserMessage('left'))
+    state.rightMessages.push(createUserMessage('right'))
     
     // 清空输入
     state.systemConfig.sharedUserInput = ''
@@ -180,7 +189,7 @@ export function useComparison() {
   /**
    * 发送消息到左侧（用户提示词对比模式）
    */
-  const sendLeftUserMessage = async () => {
+  const sendLeftUserMessage = async (attachments?: MessageAttachment[]) => {
     if (!state.userConfig.leftUserPrompt.trim()) return
     if (state.isLeftGenerating) return
     
@@ -201,7 +210,8 @@ export function useComparison() {
       id: userMessageId,
       role: 'user',
       content: userMessage,
-      timestamp: new Date()
+      timestamp: new Date(),
+      attachments: cloneAttachments(attachments)
     }
     state.leftUserMessages.push(userMsg)
     
@@ -219,7 +229,7 @@ export function useComparison() {
   /**
    * 发送消息到右侧（用户提示词对比模式）
    */
-  const sendRightUserMessage = async () => {
+  const sendRightUserMessage = async (attachments?: MessageAttachment[]) => {
     if (!state.userConfig.rightUserPrompt.trim()) return
     if (state.isRightGenerating) return
     
@@ -240,7 +250,8 @@ export function useComparison() {
       id: userMessageId,
       role: 'user',
       content: userMessage,
-      timestamp: new Date()
+      timestamp: new Date(),
+      attachments: cloneAttachments(attachments)
     }
     state.rightUserMessages.push(userMsg)
     
@@ -296,7 +307,11 @@ export function useComparison() {
         { role: 'system' as const, content: systemPrompt },
         ...messages
           .filter(m => m.id !== aiMessageId)
-          .map(m => ({ role: m.role, content: m.content }))
+          .map(m => ({
+            role: m.role,
+            content: m.content,
+            attachments: m.attachments
+          }))
       ]
       
       // 为这个特定调用创建独立的流式回调
@@ -337,6 +352,62 @@ export function useComparison() {
         state.isRightGenerating = false
       }
     }
+  }
+
+  /**
+   * 重新发送指定用户消息
+   */
+  const resendMessage = async (side: 'left' | 'right', messageId: string) => {
+    const mode = state.mode
+    const messageList = mode === 'system'
+      ? (side === 'left' ? state.leftMessages : state.rightMessages)
+      : (side === 'left' ? state.leftUserMessages : state.rightUserMessages)
+    
+    const targetIndex = messageList.findIndex(msg => msg.id === messageId)
+    if (targetIndex === -1) return
+    
+    const targetMessage = messageList[targetIndex]
+    if (targetMessage.role !== 'user') return
+    
+    if (side === 'left' && state.isLeftGenerating) return
+    if (side === 'right' && state.isRightGenerating) return
+    
+    if (targetIndex < messageList.length - 1) {
+      messageList.splice(targetIndex + 1)
+    }
+    
+    const systemPrompt = mode === 'system'
+      ? (side === 'left' ? state.systemConfig.leftSystemPrompt : state.systemConfig.rightSystemPrompt)
+      : state.userConfig.sharedSystemPrompt
+    
+    await callAI(side, systemPrompt, messageList)
+  }
+  
+  /**
+   * 重新生成指定的AI回复
+   */
+  const regenerateAssistantMessage = async (side: 'left' | 'right', messageId: string) => {
+    const mode = state.mode
+    const messageList = mode === 'system'
+      ? (side === 'left' ? state.leftMessages : state.rightMessages)
+      : (side === 'left' ? state.leftUserMessages : state.rightUserMessages)
+    
+    const targetIndex = messageList.findIndex(msg => msg.id === messageId)
+    if (targetIndex === -1) return
+    const targetMessage = messageList[targetIndex]
+    if (targetMessage.role !== 'assistant') return
+    
+    if (side === 'left' && state.isLeftGenerating) return
+    if (side === 'right' && state.isRightGenerating) return
+    
+    // 清理目标消息及其之后的内容，保持上下文一致
+    messageList.splice(targetIndex)
+    
+    const systemPrompt = mode === 'system'
+      ? (side === 'left' ? state.systemConfig.leftSystemPrompt : state.systemConfig.rightSystemPrompt)
+      : state.userConfig.sharedSystemPrompt
+    
+    await callAI(side, systemPrompt, messageList)
   }
   
   /**
@@ -390,6 +461,8 @@ export function useComparison() {
     sendSystemMessage,
     sendLeftUserMessage,
     sendRightUserMessage,
+    resendMessage,
+    regenerateAssistantMessage,
     clearHistory,
     reset
   }

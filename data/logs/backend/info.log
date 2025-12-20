@@ -1199,3 +1199,65 @@
 2025-12-18 18:38:53,280 | INFO | ✅ 本地用户登录成功: username=admin, id=40
 2025-12-18 18:39:26,637 | INFO | Received signal SIGINT. Shutting down.
 2025-12-18 18:39:36,985 | INFO | Server Stopped
+2025-12-20 07:56:15,198 | INFO | Shutdown interrupted. Killing.
+2025-12-20 07:56:15,306 | INFO | Killing Sanic-Server-0-0 [75649]
+2025-12-20 07:56:15,313 | INFO | Killing Sanic-Reloader-0 [75650]
+2025-12-20 07:56:15,328 | INFO | Received signal SIGINT. Shutting down.
+2025-12-20 07:56:30,653 | INFO | 
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │                                             Sanic v23.12.1                                             │
+  │                                    Goin' Fast @ http://0.0.0.0:8888                                    │
+  ├───────────────────────┬────────────────────────────────────────────────────────────────────────────────┤
+  │ [48;2;255;13;104m                     [0m │         app: apps                                                              │
+  │ [38;2;255;255;255;48;2;255;13;104m    ▄███ █████ ██    [0m │        mode: production, single worker                                         │
+  │ [38;2;255;255;255;48;2;255;13;104m   ██                [0m │      server: sanic, HTTP/1.1                                                   │
+  │ [38;2;255;255;255;48;2;255;13;104m    ▀███████ ███▄    [0m │      python: 3.10.10                                                           │
+  │ [38;2;255;255;255;48;2;255;13;104m                ██   [0m │    platform: macOS-14.4-x86_64-i386-64bit                                      │
+  │ [38;2;255;255;255;48;2;255;13;104m   ████ ████████▀    [0m │ auto-reload: enabled, /Users/macbookpro/Desktop/提词管家/YPrompt/backend/templates │
+  │ [48;2;255;13;104m                     [0m │    packages: sanic-routing==23.12.0, sanic-ext==23.12.0                        │
+  │ Build Fast. Run Fast. │                                                                                │
+  └───────────────────────┴────────────────────────────────────────────────────────────────────────────────┘
+
+2025-12-20 07:56:32,916 | INFO | Sanic Extensions:
+2025-12-20 07:56:32,916 | INFO |   > injection [0 dependencies; 0 constants]
+2025-12-20 07:56:32,916 | INFO |   > openapi [http://0.0.0.0:8888/docs]
+2025-12-20 07:56:32,917 | INFO |   > http 
+2025-12-20 07:56:32,917 | INFO |   > templating [jinja2==3.1.2]
+2025-12-20 07:56:32,970 | INFO | 📦 初始化数据库: sqlite
+2025-12-20 07:56:32,971 | INFO | 📁 SQLite数据库路径: ../data/yprompt.db
+2025-12-20 07:56:32,987 | INFO | ✅ SQLite连接成功: ../data/yprompt.db
+2025-12-20 07:56:32,991 | INFO | 📦 SQLite数据库为空，开始初始化...
+2025-12-20 07:56:33,049 | INFO | ✅ SQLite表结构初始化完成
+2025-12-20 07:56:33,302 | INFO | ✅ 默认管理员账号创建成功: admin / admin123
+2025-12-20 07:56:33,302 | INFO | ✅ 数据库初始化成功: sqlite
+2025-12-20 07:56:38,167 | INFO | ✅ 本地用户登录成功: username=admin, id=1
+2025-12-20 07:56:38,170 | INFO | ✅ 本地用户登录成功: username=admin, id=1
+2025-12-20 07:58:15,858 | INFO | Created user AI config successfully: user_id=1
+2025-12-20 07:58:17,643 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 07:58:17,946 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 07:58:18,648 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 07:58:18,995 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 07:58:19,173 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 07:58:19,523 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 07:58:19,790 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 07:58:19,973 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 07:58:20,103 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 07:58:20,231 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 07:58:33,874 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 07:58:49,280 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 07:58:50,373 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 07:58:52,790 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 07:58:54,594 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 08:02:21,561 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 08:02:23,624 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 08:03:11,936 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 08:03:40,419 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 08:03:43,019 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 08:04:10,607 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 08:04:12,399 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 08:04:32,653 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 08:04:59,099 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 08:05:01,350 | INFO | Updated user AI config successfully: user_id=1
+2025-12-20 08:07:53,710 | INFO | 📤 用户登出: user_id=1
+2025-12-20 08:07:59,925 | INFO | ✅ 本地用户登录成功: username=admin, id=1
+2025-12-20 08:07:59,926 | INFO | ✅ 本地用户登录成功: username=admin, id=1
