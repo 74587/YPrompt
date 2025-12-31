@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue'
 import { useDrawingStore } from '@/stores/drawingStore'
-import type { DrawingProvider } from '@/stores/drawingStore'
+import type { DrawingModel, DrawingProvider } from '@/stores/drawingStore'
 
 export function useDrawingProviderManagement() {
   const drawingStore = useDrawingStore()
@@ -16,7 +16,7 @@ export function useDrawingProviderManagement() {
     apiKey: ''
   })
 
-  const getProviderTemplate = (type: 'google' | 'custom') => {
+  const getProviderTemplate = (type: 'google' | 'custom'): { name: string, baseURL: string, models: DrawingModel[] } => {
     if (type === 'google') {
       return {
         name: 'Gemini',
